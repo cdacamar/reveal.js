@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Debugging C++ Modules in c1xx</title>
+        <link rel="stylesheet" href="../dist/reveal.css">
+        <link rel="stylesheet" href="../dist/theme/league.css" id="theme">
+        <link rel="stylesheet" href="../plugin/highlight/monokai.css">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h2>Debugging C++ Modules in c1xx</h2>
+                    <h3>Cameron DaCamara</h3>
+                </section>
+
+                <section>
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>Basic IFC -&gt; c1xx internal representation mapping:</p>
+                        <ul>
+                            <li><code>DeclIndex</code> -&gt; <code>Symbol_t*</code></li>
+                            <li><code>TypeIndex</code> -&gt; <code>const Type_t*</code></li>
+                            <li><code>ExprIndex</code> -&gt; <code>s_tree*</code> or <code>ParseTree::Node*</code></li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>What is an index?</p>
+                        <pre data-id="decl-index"><code class="cpp" data-line-numbers>struct DeclIndex : index_like::Over&lt;DeclSort&gt; {
+    using Over&lt;DeclSort&gt;::Over;
+};</code></pre>
+                    </section>
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>What is an index?</p>
+                        <pre data-id="decl-index"><code class="cpp" data-line-numbers="1">struct DeclIndex : index_like::Over&lt;DeclSort&gt; {
+    using Over&lt;DeclSort&gt;::Over;
+};</code></pre>
+                    </section>
+                    <section data-auto-animate>
+                        <pre data-id="decl-index" style="height: 540px; width: 900px"><code class="cpp" data-line-numbers>template&lt;typename S&gt;
+struct Over {
+    using SortType = S;
+    constexpr Over() : tag(), value() { }
+    constexpr Over(S s, uint32_t v) : tag(bits::rep(s)), value(v) { }
+
+    constexpr S sort() const
+    {
+        return S(tag);
+    }
+
+    constexpr Index index() const
+    {
+        return Index{ value };
+    }
+
+private:
+    bits::raw&lt;Index&gt; tag : tag_precision&lt;S&gt;;
+    bits::raw&lt;Index&gt; value : index_precision&lt;S&gt;;
+};</code></pre>
+                    </section>
+                    <section data-auto-animate>
+                        <pre data-id="decl-index" style="height: 540px; width: 900px"><code class="cpp" data-line-numbers="18,19">template&lt;typename S&gt;
+struct Over {
+    using SortType = S;
+    constexpr Over() : tag(), value() { }
+    constexpr Over(S s, uint32_t v) : tag(bits::rep(s)), value(v) { }
+
+    constexpr S sort() const
+    {
+        return S(tag);
+    }
+
+    constexpr Index index() const
+    {
+        return Index{ value };
+    }
+
+private:
+    bits::raw&lt;Index&gt; tag : tag_precision&lt;S&gt;;
+    bits::raw&lt;Index&gt; value : index_precision&lt;S&gt;;
+};</code></pre>
+                    </section>
+                    <section data-auto-animate>
+                        <pre data-id="decl-index"><code class="cpp" data-line-numbers>    bits::raw&lt;Index&gt; tag : tag_precision&lt;S&gt;;
+    bits::raw&lt;Index&gt; value : index_precision&lt;S&gt;;
+                        </code></pre>
+                    </section>
+                    <section data-auto-animate>
+                        <pre data-id="decl-index" style="width: 1125px"><code class="cpp" data-line-numbers>    bits::raw&lt;Index&gt; tag : tag_precision&lt;S&gt;; // -&gt; Module::DeclSort
+    bits::raw&lt;Index&gt; value : index_precision&lt;S&gt;; // -&gt; Module::DeclSort partition offset
+                        </code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>Sorts:</p>
+                        <ul>
+                            <li><code>DeclIndex</code> -&gt; <code>DeclSort</code></li>
+                            <li><code>TypeIndex</code> -&gt; <code>TypeSort</code></li>
+                            <li><code>ExprIndex</code> -&gt; <code>ExprSort</code></li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>Sorts:</p>
+                        <ul>
+                            <li><code>DeclIndex</code> -&gt; <code>DeclSort</code></li>
+                            <li><code>TypeIndex</code> -&gt; <code>TypeSort</code></li>
+                            <li><code>ExprIndex</code> -&gt; <code>ExprSort</code></li>
+                        </ul>
+                        <p>Can all be found in <code>src/vctools/Compiler/ifc/include/ifc/abstract-sgraph.hxx</code></p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>Sorts:</p>
+                        <ul>
+                            <li><code>DeclIndex</code> -&gt; <code>DeclSort</code></li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>Sort breakdown</p>
+                            <pre data-id="decl-index"><code class="cpp">enum class DeclSort : uint8_t {
+    VendorExtension,
+    Enumerator,
+    Variable,
+    Parameter,
+    Field,
+    Bitfield,
+    Scope,
+    ...
+    Count,
+};</code></pre>
+                    </section>
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>Sort breakdown</p>
+                            <pre data-id="decl-index"><code class="cpp">enum class DeclSort : uint8_t {
+    VendorExtension,
+    Enumerator,     // -&gt; SYMV_MOE
+    Variable,       // -&gt; SYMV_SYMBOL
+    Parameter,      // -&gt; SYMV_FORMAL,
+                    //    SYMV_TYPEPARAMETER,
+                    //    SYMV_NONTYPEPARAMETER,
+                    //    SYMV_TEMPLTEMPLPARAM
+    Field,          // -&gt; SYMV_MEMBER
+    Bitfield,       // -&gt; SYMV_BITFIELD
+    Scope,          // -&gt; SYMV_TAG
+                    //    SYMV_NAMESPACE
+    ...
+    Count,
+};</code></pre>
+                    </section>
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>Generally, a search for <code>SortType::SortValue</code> will yield useful results in the reader/writer</p>
+                    </section>
+                </section>
+
+                <section data-transition="convex-in">
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                            <ul>
+                                <li><code>attempt_to_demand_load_symbol</code></li>
+                            </ul>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                        </ul>
+                        <pre data-id="decl-index"><code class="cpp">export module m;
+export struct S { };</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                        </ul>
+                        <pre data-id="decl-index"><code class="cpp">import m;
+int main() {
+    S s; // &lt;- will invoke attempt_to_demand_load_symbol
+         //    from symbol table.
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                            <li>Bound symbol resolution</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                            <li>Bound symbol resolution</li>
+                            <ul>
+                                <li><code>attempt_to_resolve_symbol_binding</code></li>
+                                <li><code>attempt_to_resolve_token_binding</code></li>
+                            </ul>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Bound symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index"><code class="cpp" data-line-numbers>module;
+#include &lt;type_traits&gt;
+export module m;
+void g();
+
+export
+template &lt;typename T,
+          typename = std::enable_if_t&lt;std::is_same_v&lt;T, int&gt;&gt;&gt;
+void f() {
+    g();
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Bound symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index"><code class="cpp" data-line-numbers="8,10">module;
+#include &lt;type_traits&gt;
+export module m;
+void g();
+
+export
+template &lt;typename T,
+          typename = std::enable_if_t&lt;std::is_same_v&lt;T, int&gt;&gt;&gt;
+void f() {
+    g();
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Bound symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index"><code class="cpp">import m;
+int main() {
+    // This will resolve the default argument references to
+    // std::enable_if_t and std::is_same_v through
+    // attempt_to_resolve_symbol_binding.
+    //
+    // The call to 'g' is resolved through
+    // attempt_to_resolve_token_binding
+    // as the function template body is stored as tokens.
+    f&lt;int&gt;();
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                            <li>Bound symbol resolution</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                            <li>Bound symbol resolution</li>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                            <li>Bound symbol resolution</li>
+                            <li>Semantic symbol resolution</li>
+                            <ul style="font-size: 0.75em">
+                                <li><code>attempt_to_demand_load_additional_templates</code></li>
+                                <li><code>check_for_pending_imported_class</code></li>
+                                <li><code>attempt_to_define_class_template</code></li>
+                                <li><code>Module::process_pending_inline_function_definitions</code></li>
+                                <li><code>Module::demand_load_constexpr_function_definition</code></li>
+                                <li><code>Module::load_user_provided_specialization</code></li>
+                                <li><code>Module::load_partial_specializations</code></li>
+                            </ul>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index" style="height: 460px"><code class="cpp">module;
+#include &lt;type_traits&gt;
+export module m;
+export struct S { void f(); };
+
+export
+template &lt;typename T&gt;
+struct U { void f(); };
+
+template &lt;typename T&gt;
+struct U&lt;T*&gt; { void g(); };
+
+template &lt;&gt;
+struct U&lt;S&gt; { };
+
+export
+constexpr bool f() { return true; }</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index"><code class="cpp">import m;
+int main() {
+    S* s;
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index"><code class="cpp">import m;
+int main() {
+    S* s;
+    s-&gt;f(); // Definition of 'S' is needed, call
+            // CheckTagIsDefined -&gt; check_for_pending_imported_class.
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index"><code class="cpp">import m;
+int main() {
+    U&lt;char*&gt;* u1; // Definition of the class template is not needed
+                  // nor any partial specialization.
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index" style="width: 930px"><code class="cpp">import m;
+int main() {
+    U&lt;char*&gt;* u1; // Definition of the class template is not needed
+                  // nor any partial specialization.
+    u1-&gt;g(); // Partial specialization definition required, call
+             // CheckTagIsDefined -&gt; Module::load_partial_specializations
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index"><code class="cpp">import m;
+int main() {
+    U&lt;char&gt;* u2;
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index" style="width: 930px"><code class="cpp">import m;
+int main() {
+    U&lt;char&gt;* u2;
+    u2-&gt;f(); // Primary class template definition required, call
+             // CheckTagIsDefined -&gt; attempt_to_define_class_template
+             // Note: we also have to load partial specializations so
+             // Module::load_partial_specializations will also be called.
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index" style="width: 930px"><code class="cpp">import m;
+int main() {
+    U&lt;S&gt;* u3; // This is caught at specialization-time.
+              // The explicit specialization is loaded through
+              // Module::load_user_provided_specialization.
+              // Note: we do not need the definition of 'S'
+              // so its definition will not be loaded.
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index" style="width: 990px"><code class="cpp">import m;
+int main() {
+    static_assert(f()); // call Module::demand_load_constexpr_function_definition
+                        // but we do not need the codegen definition.
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index" style="width: 930px"><code class="cpp">import m;
+int main() {
+    f(); // Codegen definition required, load through
+         // Module::process_pending_inline_function_definitions
+         // during PendingEmissions()
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index" style="width: 990px; height: 475px; font-size: 0.46em"><code class="cpp">import m;
+int main() {
+  S* s;
+  s-&gt;f(); // Definition of 'S' is needed, call
+          // CheckTagIsDefined -&gt; check_for_pending_imported_class.
+  U&lt;char*&gt;* u1; // Definition of the class template is not needed
+                // nor any partial specialization.
+  u1-&gt;g(); // Partial specialization definition required, call
+           // CheckTagIsDefined -&gt; Module::load_partial_specializations
+  U&lt;char&gt;* u2;
+  u2-&gt;f(); // Primary class template definition required, call
+           // CheckTagIsDefined -&gt; attempt_to_define_class_template
+  U&lt;int&gt;* u3; // This is caught at specialization-time.
+              // The explicit specialization is loaded through
+              // Module::load_user_provided_specialization.
+  static_assert(f()); // call Module::demand_load_constexpr_function_definition
+                      // but we do not need the codegen definition.
+  f(); // Codegen definition required, load through
+       // Module::process_pending_inline_function_definitions
+       // during PendingEmissions()
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                            <li>Bound symbol resolution</li>
+                            <li>Semantic symbol resolution</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                            <li>Bound symbol resolution</li>
+                            <li>Semantic symbol resolution</li>
+                            <li>Low-level symbol resolution</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Name lookup</li>
+                            <li>Bound symbol resolution</li>
+                            <li>Semantic symbol resolution</li>
+                            <li>Low-level symbol resolution</li>
+                            <ul style="font-size: 0.75em">
+                                <li><code>InterfaceReader::resolve_no_check</code> -&gt; <code>Symbol_t*</code></li>
+                                <li><code>InterfaceReader::resolve_type</code> -&gt; <code>const Type_t*</code></li>
+                                <li><code>Module::resolve_fbt</code> -&gt; <code>s_tree*</code></li>
+                                <li><code>InterfaceReader::materialize_parse_tree</code> -&gt; <code>ParseTree::Node*</code></li>
+                            </ul>
+                        </ul>
+                    </section>
+                </section>
+
+                <section data-transition="convex-in">
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li><a href="https://github.com/microsoft/ifc/tree/main/samples/sgraph-js">sgraph-js (IFC viewer)</a></li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>sgraph-js (IFC viewer)</li>
+                        </ul>
+                        <p>Consider:</p>
+                        <pre data-id="decl-index" style="width: 850px"><code class="cpp">export module m;
+export namespace ExportedNS {
+    struct S { void mf(); };
+    void global_f();
+    template &lt;typename T, typename U&gt;
+    struct Pair { T first; T second; };
+}
+namespace NonExportedNS {
+    struct S { void mf(); };
+    void global_f();
+    template &lt;typename T, typename U&gt;
+    struct Pair { T first; T second; };
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>sgraph-js (IFC viewer)</li>
+                        </ul>
+                        <img src="assets/sgraph.png" style="height:500px">
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b" data-background="assets/sgraph.png" data-background-color="black" data-background-opacity="0.15">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>sgraph-js (IFC viewer)</li>
+                            <ul>
+                                <li>Investigate IFC-specific issues without debugging</li>
+                                <li>Search for symbols that may not have been serialized</li>
+                                <li>Navigate and view raw data</li>
+                            </ul>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>sgraph-js (IFC viewer)</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>sgraph-js (IFC viewer)</li>
+                            <li><a href="https://devdiv.visualstudio.com/InternalTools/_git/module-trace-viewer">Module Trace Viewer (MTV)</a></li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>Module Trace Viewer (MTV)</li>
+                        </ul>
+                        <p>Consider (using the module from before):</p>
+                        <pre data-id="decl-index" style="width: 850px"><code class="cpp">import m;
+int main() {
+    using namespace ExportedNS;
+    global_f();
+    Pair&lt;S*, int&gt; pair;
+    pair.first-&gt;mf();
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>Module Trace Viewer (MTV)</li>
+                        </ul>
+                        <p>Compile using a new switch: <code>/d1module:enableLogging</code>.</p>
+                        <p>In my case my command line and output:</p>
+                        <pre><code class="sh">$ cl /d1module:enableLoggingD:\ /c /W4 /std:c++latest /nologo main.cpp
+main.cpp
+module trace file written to 'D:\main.cpp.module.trace.json'</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>Module Trace Viewer (MTV)</li>
+                        </ul>
+                        <img src="assets/mtv.png" style="height:500px">
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b" data-background="assets/mtv.png" data-background-color="black" data-background-opacity="0.15">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>Module Trace Viewer (MTV)</li>
+                            <ul>
+                                <li>For investigating reader-specific failures</li>
+                                <li>Chronological ordering of materialized compiler structures</li>
+                                <li>Identifying the index causing an issue, use that index for a breakpoint</li>
+                                <li>Order by time to identify perf bottlenecks</li>
+                                <li>Trace is emitted even during error or AV</li>
+                            </ul>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>sgraph-js (IFC viewer)</li>
+                            <li>Module Trace Viewer (MTV)</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>sgraph-js (IFC viewer)</li>
+                            <li>Module Trace Viewer (MTV)</li>
+                            <li>Under <code>VERSP_DEBUG</code> every symbol has <code>readers</code> field</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Debugging Tools</h2>
+                        <ul>
+                            <li>sgraph-js (IFC viewer)</li>
+                            <li>Module Trace Viewer (MTV)</li>
+                            <li>Under <code>VERSP_DEBUG</code> every symbol has <code>readers</code> field</li>
+                            <li>Assertions!</li>
+                        </ul>
+                    </section>
+
+                </section>
+
+                <section data-transition="convex-in">
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Call to action!</h2>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Call to action!</h2>
+                        <p>Try debugging some modules code!</p>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Call to action!</h2>
+                        <p>Try debugging some modules code!</p>
+                        <ul>
+                            <li>Break at entry-points listed</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Call to action!</h2>
+                        <p>Try debugging some modules code!</p>
+                        <ul>
+                            <li>Break at entry-points listed</li>
+                            <li>Find bugs</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Call to action!</h2>
+                        <p>Try debugging some modules code!</p>
+                        <ul>
+                            <li>Break at entry-points listed</li>
+                            <li>Find bugs</li>
+                            <li>Profit!</li>
+                        </ul>
+                    </section>
+                </section>
+
+                <section data-transition="convex-in">
+                    <section data-auto-animate data-auto-animate-id="d">
+                        <h2>Questions?</h2>
+                    </section>
+                </section>
+
+                <section data-transition="convex-in">
+                    <section data-auto-animate data-auto-animate-id="e">
+                        <h2>Resources</h2>
+                        <ul>
+                            <li>sgraph-js: <a href="https://github.com/microsoft/ifc/tree/main/samples/sgraph-js">https://github.com/microsoft/ifc/tree/main/samples/sgraph-js</a></li>
+                            <li>MTV: <a href="https://devdiv.visualstudio.com/InternalTools/_git/module-trace-viewer">https://devdiv.visualstudio.com/InternalTools/_git/module-trace-viewer</a></li>
+                        </ul>
+                    </section>
+                </section>
+            </div>
+        </div>
+        <script src="../dist/reveal.js"></script>
+        <script src="../plugin/highlight/highlight.js"></script>
+        <script>
+            Reveal.initialize({
+                progress: true,
+                slideNumber: true,
+                hash: true,
+                plugins: [ RevealHighlight ]
+            });
+        </script>
+    </body>
+</html>

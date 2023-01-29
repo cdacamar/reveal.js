@@ -12,19 +12,20 @@
             <div class="slides">
                 <section>
                     <h2>Debugging C++ Modules in c1xx</h2>
-                </section>
-
-                <section data-auto-animate>
-                    <h2>Basic Concepts</h2>
-                    <p>Basic IFC -&gt; c1xx internal representation mapping:</p>
-                    <ul>
-                        <li><code>DeclIndex</code> -&gt; <code>Symbol_t*</code></li>
-                        <li><code>TypeIndex</code> -&gt; <code>const Type_t*</code></li>
-                        <li><code>ExprIndex</code> -&gt; <code>s_tree*</code> or <code>ParseTree::Node*</code></li>
-                    </ul>
+                    <h3>Cameron DaCamara</h3>
                 </section>
 
                 <section>
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>Basic IFC -&gt; c1xx internal representation mapping:</p>
+                        <ul>
+                            <li><code>DeclIndex</code> -&gt; <code>Symbol_t*</code></li>
+                            <li><code>TypeIndex</code> -&gt; <code>const Type_t*</code></li>
+                            <li><code>ExprIndex</code> -&gt; <code>s_tree*</code> or <code>ParseTree::Node*</code></li>
+                        </ul>
+                    </section>
+
                     <section data-auto-animate>
                         <h2>Basic Concepts</h2>
                         <p>What is an index?</p>
@@ -62,6 +63,28 @@ private:
 };</code></pre>
                     </section>
                     <section data-auto-animate>
+                        <pre data-id="decl-index" style="height: 540px; width: 900px"><code class="cpp" data-line-numbers="18,19">template&lt;typename S&gt;
+struct Over {
+    using SortType = S;
+    constexpr Over() : tag(), value() { }
+    constexpr Over(S s, uint32_t v) : tag(bits::rep(s)), value(v) { }
+
+    constexpr S sort() const
+    {
+        return S(tag);
+    }
+
+    constexpr Index index() const
+    {
+        return Index{ value };
+    }
+
+private:
+    bits::raw&lt;Index&gt; tag : tag_precision&lt;S&gt;;
+    bits::raw&lt;Index&gt; value : index_precision&lt;S&gt;;
+};</code></pre>
+                    </section>
+                    <section data-auto-animate>
                         <pre data-id="decl-index"><code class="cpp" data-line-numbers>    bits::raw&lt;Index&gt; tag : tag_precision&lt;S&gt;;
     bits::raw&lt;Index&gt; value : index_precision&lt;S&gt;;
                         </code></pre>
@@ -71,38 +94,36 @@ private:
     bits::raw&lt;Index&gt; value : index_precision&lt;S&gt;; // -&gt; Module::DeclSort partition offset
                         </code></pre>
                     </section>
-                </section>
 
-                <section data-auto-animate>
-                    <h2>Basic Concepts</h2>
-                    <p>Sorts:</p>
-                    <ul>
-                        <li><code>DeclIndex</code> -&gt; <code>DeclSort</code></li>
-                        <li><code>TypeIndex</code> -&gt; <code>TypeSort</code></li>
-                        <li><code>ExprIndex</code> -&gt; <code>ExprSort</code></li>
-                    </ul>
-                </section>
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>Sorts:</p>
+                        <ul>
+                            <li><code>DeclIndex</code> -&gt; <code>DeclSort</code></li>
+                            <li><code>TypeIndex</code> -&gt; <code>TypeSort</code></li>
+                            <li><code>ExprIndex</code> -&gt; <code>ExprSort</code></li>
+                        </ul>
+                    </section>
 
-                <section data-auto-animate>
-                    <h2>Basic Concepts</h2>
-                    <p>Sorts:</p>
-                    <ul>
-                        <li><code>DeclIndex</code> -&gt; <code>DeclSort</code></li>
-                        <li><code>TypeIndex</code> -&gt; <code>TypeSort</code></li>
-                        <li><code>ExprIndex</code> -&gt; <code>ExprSort</code></li>
-                    </ul>
-                    <p>Can all be found in <code>src/vctools/Compiler/ifc/include/ifc/abstract-sgraph.hxx</code></p>
-                </section>
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>Sorts:</p>
+                        <ul>
+                            <li><code>DeclIndex</code> -&gt; <code>DeclSort</code></li>
+                            <li><code>TypeIndex</code> -&gt; <code>TypeSort</code></li>
+                            <li><code>ExprIndex</code> -&gt; <code>ExprSort</code></li>
+                        </ul>
+                        <p>Can all be found in <code>src/vctools/Compiler/ifc/include/ifc/abstract-sgraph.hxx</code></p>
+                    </section>
 
-                <section data-auto-animate>
-                    <h2>Basic Concepts</h2>
-                    <p>Sorts:</p>
-                    <ul>
-                        <li><code>DeclIndex</code> -&gt; <code>DeclSort</code></li>
-                    </ul>
-                </section>
+                    <section data-auto-animate>
+                        <h2>Basic Concepts</h2>
+                        <p>Sorts:</p>
+                        <ul>
+                            <li><code>DeclIndex</code> -&gt; <code>DeclSort</code></li>
+                        </ul>
+                    </section>
 
-                <section>
                     <section data-auto-animate>
                         <h2>Basic Concepts</h2>
                         <p>Sort breakdown</p>
@@ -218,7 +239,25 @@ int main() {
                         <ul>
                             <li>Bound symbol resolution</li>
                         </ul>
-                        <pre data-id="decl-index"><code class="cpp">module;
+                        <pre data-id="decl-index"><code class="cpp" data-line-numbers>module;
+#include &lt;type_traits&gt;
+export module m;
+void g();
+
+export
+template &lt;typename T,
+          typename = std::enable_if_t&lt;std::is_same_v&lt;T, int&gt;&gt;&gt;
+void f() {
+    g();
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Primary Entry-Points</h2>
+                        <ul>
+                            <li>Bound symbol resolution</li>
+                        </ul>
+                        <pre data-id="decl-index"><code class="cpp" data-line-numbers="8,10">module;
 #include &lt;type_traits&gt;
 export module m;
 void g();
@@ -392,7 +431,7 @@ int main() {
                         <pre data-id="decl-index" style="width: 930px"><code class="cpp">import m;
 int main() {
     U&lt;S&gt;* u3; // This is caught at specialization-time.
-              // The explicit specialization is loaded call
+              // The explicit specialization is loaded through
               // Module::load_user_provided_specialization.
               // Note: we do not need the definition of 'S'
               // so its definition will not be loaded.
@@ -442,7 +481,7 @@ int main() {
   u2-&gt;f(); // Primary class template definition required, call
            // CheckTagIsDefined -&gt; attempt_to_define_class_template
   U&lt;int&gt;* u3; // This is caught at specialization-time.
-              // The explicit specialization is loaded call
+              // The explicit specialization is loaded through
               // Module::load_user_provided_specialization.
   static_assert(f()); // call Module::demand_load_constexpr_function_definition
                       // but we do not need the codegen definition.
@@ -578,7 +617,7 @@ int main() {
                         </ul>
                         <p>Compile using a new switch: <code>/d1module:enableLogging</code>.</p>
                         <p>In my case my command line and output:</p>
-                        <pre><code class="bash">$ cl /d1module:enableLoggingD:\ /c /W4 /std:c++latest /nologo main.cpp
+                        <pre><code class="sh">$ cl /d1module:enableLoggingD:\ /c /W4 /std:c++latest /nologo main.cpp
 main.cpp
 module trace file written to 'D:\main.cpp.module.trace.json'</code></pre>
                     </section>

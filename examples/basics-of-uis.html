@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Effective UIs for Compiler Development</title>
+        <link rel="stylesheet" href="../dist/reveal.css">
+        <link rel="stylesheet" href="../dist/theme/moon.css" id="theme">
+        <link rel="stylesheet" href="../plugin/highlight/monokai.css">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h2>Effective UIs for Compiler Development</h2>
+                    <h3>Cameron DaCamara</h3>
+                </section>
+
+                <section>
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Problem: There's a bad bit in the tree... somewhere.</p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Problem: There's a bad bit in the tree... somewhere.</p>
+                        <p>Answer: Dump the tree.</p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Problem: There's a bad bit in the tree... somewhere.</p>
+                        <p>Answer: Dump the tree.</p>
+                        <p>Not as helpful as you might think...</p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Problem: There's a bad bit in the tree... somewhere.</p>
+                        <p>Answer: Dump the tree.</p>
+                        <p>Let's find <code>std::ranges::sort</code> in <code>std.ifc</code> using the <b>ifc-printer</b> tool.</p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <pre>scope-1
+|-decl.scope-0 'namespace' std reachable(initializer)
+| \-scope-2
+|   |-decl.using-declaration-0 int8_t home-scope(decl.scope-0) decl.alias-13
+|   |-decl.using-declaration-1 int16_t home-scope(decl.scope-0) decl.alias-14
+|   |-decl.using-declaration-2 int32_t home-scope(decl.scope-0) decl.alias-15
+|   |-decl.using-declaration-3 int64_t home-scope(decl.scope-0) decl.alias-16
+|   |-decl.using-declaration-4 uint8_t home-scope(decl.scope-0) decl.alias-9
+|   |-decl.using-declaration-5 uint16_t home-scope(decl.scope-0) decl.alias-10
+|   |-decl.using-declaration-6 uint32_t home-scope(decl.scope-0) decl.alias-11
+|   |-decl.using-declaration-7 uint64_t home-scope(decl.scope-0) decl.alias-12
+|   |-decl.using-declaration-8 int_least8_t home-scope(decl.scope-0) decl.alias-50
+|   |-decl.using-declaration-9 int_least16_t home-scope(decl.scope-0) decl.alias-51
+|   |-decl.using-declaration-10 int_least32_t home-scope(decl.scope-0) decl.alias-52
+|   |-decl.using-declaration-11 int_least64_t home-scope(decl.scope-0) decl.alias-53
+|   |-decl.using-declaration-12 uint_least8_t home-scope(decl.scope-0) decl.alias-54
+|   |-decl.using-declaration-13 uint_least16_t home-scope(decl.scope-0) decl.alias-55
+|   |-decl.using-declaration-14 uint_least32_t home-scope(decl.scope-0) decl.alias-56
+|   |-decl.using-declaration-15 uint_least64_t home-scope(decl.scope-0) decl.alias-57
+|   |-decl.using-declaration-16 int_fast8_t home-scope(decl.scope-0) decl.alias-58
+|   |-decl.using-declaration-17 int_fast16_t home-scope(decl.scope-0) decl.alias-59
+|   |-decl.using-declaration-18 int_fast32_t home-scope(decl.scope-0) decl.alias-60
+|   |-decl.using-declaration-19 int_fast64_t home-scope(decl.scope-0) decl.alias-61
+|   |-decl.using-declaration-20 uint_fast8_t home-scope(decl.scope-0) decl.alias-62
+|   |-decl.using-declaration-21 uint_fast16_t home-scope(decl.scope-0) decl.alias-63
+|   |-decl.using-declaration-22 uint_fast32_t home-scope(decl.scope-0) decl.alias-64
+|   |-decl.using-declaration-23 uint_fast64_t home-scope(decl.scope-0) decl.alias-65
+|   |-decl.using-declaration-24 intmax_t home-scope(decl.scope-0) decl.alias-66
+|   |-decl.using-declaration-25 intptr_t home-scope(decl.scope-0) decl.alias-42
+|   |-decl.using-declaration-26 uintmax_t home-scope(decl.scope-0) decl.alias-22
+|   |-decl.using-declaration-27 uintptr_t home-scope(decl.scope-0) decl.alias-41
+|   |-decl.using-declaration-28 size_t home-scope(decl.scope-0) decl.alias-0
+|   |-decl.using-declaration-29 div_t home-scope(decl.scope-0) decl.alias-67
+|   |-decl.using-declaration-30 ldiv_t home-scope(decl.scope-0) decl.alias-68
+|   |-decl.using-declaration-31 abort home-scope(decl.scope-0) decl.function-31</pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Well let's just grep!</p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Well let's just grep!</p>
+                        <pre>$ grep --binary-files=text as_rvalue out.txt --color=always
+|   |   |-decl.variable-577 'decl-type(decl.scope-2101) const' sort home-scope(decl.scope-517) public vague external member-of-global-module constexpr object-initializer-exported object-vendor-traits reachable(initializer)
+|   |-decl.template-1475 'function-type' sort home-scope(decl.scope-0) public external member-of-global-module reachable(initializer)
+|   | \-decl.function-1762 'void(decl-type(decl.parameter-9862) const,decl-type(decl.parameter-9862) const,decl-type(decl.parameter-9863))' sort home-scope(decl.scope-0) public external member-of-global-module reachable(initializer) inline constexpr
+|   |-decl.template-1476 'function-type' sort home-scope(decl.scope-0) public external member-of-global-module reachable(initializer)
+|   | \-decl.function-1763 'void(decl-type(decl.parameter-9870) const,decl-type(decl.parameter-9870) const)' sort home-scope(decl.scope-0) public external member-of-global-module reachable(initializer) inline constexpr
+|   |-decl.template-1477 'function-type' sort home-scope(decl.scope-0) public external member-of-global-module reachable(initializer)
+|   | \-decl.function-1764 'void(decl-type(decl.parameter-9875)&&,decl-type(decl.parameter-9876),decl-type(decl.parameter-9876),decl-type(decl.parameter-9877))' sort home-scope(decl.scope-0) public external member-of-global-module reachable(initializer)
+|   |-decl.template-1493 'function-type' sort home-scope(decl.scope-0) public external member-of-global-module reachable(initializer)
+|   | \-decl.function-1775 'void(decl-type(decl.parameter-9951)&&,decl-type(decl.parameter-9952) const,decl-type(decl.parameter-9952) const)' sort home-scope(decl.scope-0) public external member-of-global-module reachable(initializer)
+|   |     |-decl.method-1068 'void(syntactic-type(expr.template-id-7769): no-type)' sort home-scope(decl.template-674) public initialized-in-class member-of-global-module reachable(initializer)
+|   |     |-decl.template-3637 'function-type' sort home-scope(decl.template-674) public initialized-in-class member-of-global-module reachable(initializer)
+|   |     | \-decl.method-1069 'void(syntactic-type(expr.template-id-8275): decl-type(decl.parameter-25517))' sort home-scope(decl.template-674) public initialized-in-class member-of-global-module reachable(initializer) inline
+|   |   | |-decl.method-2580 'void(syntactic-type(expr.template-id-12047): no-type)' sort home-scope(decl.template-1700) public initialized-in-class member-of-global-module reachable(initializer)
+|   |   | |-decl.template-4051 'function-type' sort home-scope(decl.template-1700) public initialized-in-class member-of-global-module reachable(initializer)
+|   |   | | \-decl.method-2581 'void(syntactic-type(expr.template-id-12299): decl-type(decl.parameter-29031))' sort home-scope(decl.template-1700) public initialized-in-class member-of-global-module reachable(initializer) inline</pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Well let's just grep!</p>
+                        <pre>$ grep --binary-files=text as_rvalue out.txt --color=always
+|   |   |-decl.variable-577 'decl-type(decl.scope-2101) const' sort home-scope(decl.scope-517) public vague external member-of-global-module constexpr object-initializer-exported object-vendor-traits reachable(initializer)
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>The whole output file is <b>21MB</b></p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>The whole output file is <b>21MB</b></p>
+                        <p>This is partly due to data presentation baked-into the output file itself.</p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Raw text is useful when...</p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Raw text is useful when...</p>
+                        <ul>
+                            <li>The output is reasonably sparse.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Raw text is useful when...</p>
+                        <ul>
+                            <li>The output is reasonably sparse.</li>
+                            <li>The output is reasonably sized.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Raw text is useful when...</p>
+                        <ul>
+                            <li>The output is reasonably sparse.</li>
+                            <li>The output is reasonably sized.</li>
+                            <li>You know exactly what you're searching for.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>UIs are useful when...</p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>UIs are useful when...</p>
+                        <ul>
+                            <li>Output can be arbitrarily complex.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>UIs are useful when...</p>
+                        <ul>
+                            <li>Output can be arbitrarily complex.</li>
+                            <li>You know a rough shape you're looking for.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>UIs are useful when...</p>
+                        <ul>
+                            <li>Output can be arbitrarily complex.</li>
+                            <li>You know a rough shape you're looking for.</li>
+                            <li>You need the ability to filter over various properties.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Motivation</h2>
+                        <p>Let's find <code>std::ranges::sort</code> in <code>std.ifc</code> using the <b>ifc-visualizer</b> tool.</p>
+                    </section>
+                </section>
+
+                <section data-transition="convex-in">
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>How I have used UIs</h2>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>How I have used UIs</h2>
+                        <ul>
+                            <li>IFC visualization.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>How I have used UIs</h2>
+                        <ul>
+                            <li>IFC visualization.</li>
+                            <li>Module materialization visualization.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>How I have used UIs</h2>
+                        <ul>
+                            <li>IFC visualization.</li>
+                            <li>Module materialization visualization.</li>
+                            <li>IFC diffing.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>How I have used UIs</h2>
+                        <ul>
+                            <li>IFC visualization.</li>
+                            <li>Module materialization visualization.</li>
+                            <li>IFC diffing.</li>
+                            <li>Text editing.</li>
+                        </ul>
+                    </section>
+                </section>
+
+                <section data-transition="convex-in">
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Where to start designing a UI</h2>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Where to start designing a UI</h2>
+                        <ul>
+                            <li>Solve the real data problem first.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="b">
+                        <h2>Where to start designing a UI</h2>
+                        <ul>
+                            <li>Solve the real data problem first.</li>
+                            <li>Sketch a mock presentation of the data.</li>
+                        </ul>
+                    </section>
+                </section>
+
+                <section data-transition="convex-in">
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Good UI design</h2>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Good UI design</h2>
+                        <p>How many times have we all used a bad UI?</p>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Good UI design</h2>
+                        <p>UI patterns to consider:</p>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Good UI design</h2>
+                        <p>UI patterns to consider:</p>
+                        <ul>
+                            <li>Ease of use.  Leverage familiarity.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Good UI design</h2>
+                        <p>UI patterns to consider:</p>
+                        <ul>
+                            <li>Ease of use.  Leverage familiarity.</li>
+                            <li>Choice of colors.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Good UI design</h2>
+                        <p>UI patterns to consider:</p>
+                        <ul>
+                            <li>Ease of use.  Leverage familiarity.</li>
+                            <li>Choice of colors.</li>
+                            <li>Data drive <em>everything</em>.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="c">
+                        <h2>Good UI design</h2>
+                        <p>UI patterns to consider:</p>
+                        <ul>
+                            <li>Ease of use.  Leverage familiarity.</li>
+                            <li>Choice of colors.</li>
+                            <li>Data drive <em>everything</em>.</li>
+                            <li>Rendering for 'feel'.</li>
+                        </ul>
+                    </section>
+                </section>
+
+                <section data-transition="convex-in">
+                    <section data-auto-animate data-auto-animate-id="d">
+                        <h2>Achieving UI performance</h2>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="d">
+                        <h2>Achieving UI performance</h2>
+                        <ul>
+                            <li>Aim for 0 allocations in idle frames.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="d">
+                        <h2>Achieving UI performance</h2>
+                        <ul>
+                            <li>Aim for 0 allocations in idle frames.</li>
+                            <li>Precompute a model which can be iterated quickly.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="d">
+                        <h2>Achieving UI performance</h2>
+                        <ul>
+                            <li>Aim for 0 allocations in idle frames.</li>
+                            <li>Precompute a model which can be iterated quickly.</li>
+                            <li>Optimize for expensive events such as mouse movement.</li>
+                        </ul>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="d">
+                        <h2>Achieving UI performance</h2>
+                        <ul>
+                            <li>Aim for 0 allocations in idle frames.</li>
+                            <li>Precompute a model which can be iterated quickly.</li>
+                            <li>Optimize for expensive events such as mouse movement.</li>
+                            <li>Batch rendering, if applicable.</li>
+                        </ul>
+                    </section>
+                </section>
+
+                <section data-transition="convex-in">
+                    <section data-auto-animate data-auto-animate-id="e">
+                        <h2>Demo time!</h2>
+                    </section>
+                </section>
+            </div>
+        </div>
+        <script src="../dist/reveal.js"></script>
+        <script src="../plugin/highlight/highlight.js"></script>
+        <script>
+            Reveal.initialize({
+                progress: true,
+                slideNumber: true,
+                hash: true,
+                plugins: [ RevealHighlight ]
+            });
+        </script>
+    </body>
+</html>

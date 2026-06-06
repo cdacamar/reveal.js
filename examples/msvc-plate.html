@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Practical MSVC Plate</title>
+        <link rel="stylesheet" href="../dist/reveal.css">
+        <link rel="stylesheet" href="../dist/theme/black.css" id="theme">
+        <link rel="stylesheet" href="../plugin/highlight/monokai.css">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h2>Practical <code>msvc::plate</code></h2>
+                    <h4>Cameron DaCamara - Cody Miller</h4>
+                </section>
+
+                <section>
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="font-size: 0.46em;"><code class="cpp" data-line-numbers>// If anyone decided to go mutate the type of the NewExpr_t after it was
+// created, make sure the type of the codegen tree is kept in sync.
+//
+// Failure to do this can cause problems during toil.  See bug #1087185.</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="font-size: 0.46em;"><code class="cpp" data-line-numbers>// If anyone decided to go mutate the type of the NewExpr_t after it was
+// created, make sure the type of the codegen tree is kept in sync.
+//
+// Failure to do this can cause problems during toil.  See bug #1087185.
+pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="font-size: 0.46em;"><code class="cpp" data-line-numbers>    // If anyone decided to go mutate the type of the NewExpr_t after it was
+    // created, make sure the type of the codegen tree is kept in sync.
+    //
+    // Failure to do this can cause problems during toil.  See bug #1087185.
+    pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="font-size: 0.46em;"><code class="cpp" data-line-numbers>s_tree* update_new_expr_type(NewExpr_t* pTree)
+{
+    // If anyone decided to go mutate the type of the NewExpr_t after it was
+    // created, make sure the type of the codegen tree is kept in sync.
+    //
+    // Failure to do this can cause problems during toil.  See bug #1087185.
+    pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());
+    return pTree;
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="width: 1200px; font-size: 0.46em;"><code class="cpp" data-line-numbers>class SyncTypeOfNewExprWithCodeGenTree final : public TreeRewriteVisitor&lt;SyncTypeOfNewExprWithCodeGenTree&gt;,
+    public TreeVisitorPhase&lt;SyncTypeOfNewExprWithCodeGenTree&gt;
+{
+    s_tree* update_new_expr_type(NewExpr_t* pTree)
+    {
+        // If anyone decided to go mutate the type of the NewExpr_t after it was
+        // created, make sure the type of the codegen tree is kept in sync.
+        //
+        // Failure to do this can cause problems during toil.  See bug #1087185.
+        pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());
+        return pTree;
+    }
+};</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="width: 1200px; font-size: 0.46em;"><code class="cpp" data-line-numbers>class SyncTypeOfNewExprWithCodeGenTree final : public TreeRewriteVisitor&lt;SyncTypeOfNewExprWithCodeGenTree&gt;,
+    public TreeVisitorPhase&lt;SyncTypeOfNewExprWithCodeGenTree&gt;
+{
+    // Indicate whether the leaf node type may be rewritten by this visitor
+    template&lt;typename T&gt;
+    static constexpr bool may_rewrite = std::is_base_of_v&lt;NewExpr_t, T&gt;;
+
+    s_tree* update_new_expr_type(NewExpr_t* pTree)
+    {
+        // If anyone decided to go mutate the type of the NewExpr_t after it was
+        // created, make sure the type of the codegen tree is kept in sync.
+        //
+        // Failure to do this can cause problems during toil.  See bug #1087185.
+        pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());
+        return pTree;
+    }
+};</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="width: 1200px; height: 450px; font-size: 0.46em;"><code class="cpp" data-line-numbers>class SyncTypeOfNewExprWithCodeGenTree final : public TreeRewriteVisitor&lt;SyncTypeOfNewExprWithCodeGenTree&gt;,
+    public TreeVisitorPhase&lt;SyncTypeOfNewExprWithCodeGenTree&gt;
+{
+    // Indicate whether the leaf node type may be rewritten by this visitor
+    template&lt;typename T&gt;
+    static constexpr bool may_rewrite = std::is_base_of_v&lt;NewExpr_t, T&gt;;
+
+    using TreeRewriteVisitor::Visit;
+
+    s_tree* update_new_expr_type(NewExpr_t* pTree)
+    {
+        // If anyone decided to go mutate the type of the NewExpr_t after it was
+        // created, make sure the type of the codegen tree is kept in sync.
+        //
+        // Failure to do this can cause problems during toil.  See bug #1087185.
+        pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());
+        return pTree;
+    }
+};</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="width: 1200px; height: 520px; font-size: 0.46em;"><code class="cpp" data-line-numbers>class SyncTypeOfNewExprWithCodeGenTree final : public TreeRewriteVisitor&lt;SyncTypeOfNewExprWithCodeGenTree&gt;,
+    public TreeVisitorPhase&lt;SyncTypeOfNewExprWithCodeGenTree&gt;
+{
+    DECLARE_PHASE("Sync Type of New Expr with CodeGen Tree", "newtype", &ILEmitterPhase);
+public:
+    // Indicate whether the leaf node type may be rewritten by this visitor
+    template&lt;typename T&gt;
+    static constexpr bool may_rewrite = std::is_base_of_v&lt;NewExpr_t, T&gt;;
+
+    using TreeRewriteVisitor::Visit;
+
+    s_tree* update_new_expr_type(NewExpr_t* pTree)
+    {
+        // If anyone decided to go mutate the type of the NewExpr_t after it was
+        // created, make sure the type of the codegen tree is kept in sync.
+        //
+        // Failure to do this can cause problems during toil.  See bug #1087185.
+        pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());
+        return pTree;
+    }
+};</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="width: 1200px; height: 540px; font-size: 0.46em;"><code class="cpp" data-line-numbers>class SyncTypeOfNewExprWithCodeGenTree final : public TreeRewriteVisitor&lt;SyncTypeOfNewExprWithCodeGenTree&gt;,
+    public TreeVisitorPhase&lt;SyncTypeOfNewExprWithCodeGenTree&gt;
+{
+    DECLARE_PHASE("Sync Type of New Expr with CodeGen Tree", "newtype", &ILEmitterPhase);
+public:
+    // Indicate whether the leaf node type may be rewritten by this visitor
+    template&lt;typename T&gt;
+    static constexpr bool may_rewrite = std::is_base_of_v&lt;NewExpr_t, T&gt;;
+
+    using TreeRewriteVisitor::Visit;
+
+    s_tree* Visit(NewExpr_t* pTree)
+    {
+        // Make sure 'may_rewrite' is in sync with 'Visit'
+        static_assert(may_rewrite&lt;std::remove_pointer_t&lt;decltype(pTree)&gt;&gt;);
+        // If anyone decided to go mutate the type of the NewExpr_t after it was
+        // created, make sure the type of the codegen tree is kept in sync.
+        //
+        // Failure to do this can cause problems during toil.  See bug #1087185.
+        pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());
+        return pTree;
+    }
+};</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <p>A bug... What??</p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="width: 1200px; height: 540px; font-size: 0.46em;"><code class="cpp" data-line-numbers>class SyncTypeOfNewExprWithCodeGenTree final : public TreeRewriteVisitor&lt;SyncTypeOfNewExprWithCodeGenTree&gt;,
+    public TreeVisitorPhase&lt;SyncTypeOfNewExprWithCodeGenTree&gt;
+{
+    DECLARE_PHASE("Sync Type of New Expr with CodeGen Tree", "newtype", &ILEmitterPhase);
+public:
+    // Indicate whether the leaf node type may be rewritten by this visitor
+    template&lt;typename T&gt;
+    static constexpr bool may_rewrite = std::is_base_of_v&lt;NewExpr_t, T&gt;;
+
+    using TreeRewriteVisitor::Visit;
+
+    s_tree* Visit(NewExpr_t* pTree)
+    {
+        // Make sure 'may_rewrite' is in sync with 'Visit'
+        static_assert(may_rewrite&lt;std::remove_pointer_t&lt;decltype(pTree)&gt;&gt;);
+        // If anyone decided to go mutate the type of the NewExpr_t after it was
+        // created, make sure the type of the codegen tree is kept in sync.
+        //
+        // Failure to do this can cause problems during toil.  See bug #1087185.
+        pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());
+        return pTree;
+    }
+};</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="width: 1200px; height: 560px; font-size: 0.46em;"><code class="cpp" data-line-numbers>class SyncTypeOfNewExprWithCodeGenTree final : public TreeRewriteVisitor&lt;SyncTypeOfNewExprWithCodeGenTree&gt;,
+    public TreeVisitorPhase&lt;SyncTypeOfNewExprWithCodeGenTree&gt;
+{
+    DECLARE_PHASE("Sync Type of New Expr with CodeGen Tree", "newtype", &ILEmitterPhase);
+public:
+    // Indicate whether the leaf node type may be rewritten by this visitor
+    template&lt;typename T&gt;
+    static constexpr bool may_rewrite = std::is_base_of_v&lt;NewExpr_t, T&gt;;
+
+    using TreeRewriteVisitor::Visit;
+
+    s_tree* Visit(NewExpr_t* pTree)
+    {
+        // Make sure 'may_rewrite' is in sync with 'Visit'
+        static_assert(may_rewrite&lt;std::remove_pointer_t&lt;decltype(pTree)&gt;&gt;);
+        VisitChildren(pTree);
+        // If anyone decided to go mutate the type of the NewExpr_t after it was
+        // created, make sure the type of the codegen tree is kept in sync.
+        //
+        // Failure to do this can cause problems during toil.  See bug #1087185.
+        pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());
+        return pTree;
+    }
+};</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="width: 1200px; height: 560px; font-size: 0.46em;"><code class="cpp" data-line-numbers="16">class SyncTypeOfNewExprWithCodeGenTree final : public TreeRewriteVisitor&lt;SyncTypeOfNewExprWithCodeGenTree&gt;,
+    public TreeVisitorPhase&lt;SyncTypeOfNewExprWithCodeGenTree&gt;
+{
+    DECLARE_PHASE("Sync Type of New Expr with CodeGen Tree", "newtype", &ILEmitterPhase);
+public:
+    // Indicate whether the leaf node type may be rewritten by this visitor
+    template&lt;typename T&gt;
+    static constexpr bool may_rewrite = std::is_base_of_v&lt;NewExpr_t, T&gt;;
+
+    using TreeRewriteVisitor::Visit;
+
+    s_tree* Visit(NewExpr_t* pTree)
+    {
+        // Make sure 'may_rewrite' is in sync with 'Visit'
+        static_assert(may_rewrite&lt;std::remove_pointer_t&lt;decltype(pTree)&gt;&gt;);
+        VisitChildren(pTree);
+        // If anyone decided to go mutate the type of the NewExpr_t after it was
+        // created, make sure the type of the codegen tree is kept in sync.
+        //
+        // Failure to do this can cause problems during toil.  See bug #1087185.
+        pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());
+        return pTree;
+    }
+};</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <pre data-id="decl-index" style="width: 1200px; height: 560px; font-size: 0.46em;"><code class="cpp" data-line-numbers="16">class SyncTypeOfNewExprWithCodeGenTree final : public TreeRewriteVisitor&lt;SyncTypeOfNewExprWithCodeGenTree&gt;,
+    public TreeVisitorPhase&lt;SyncTypeOfNewExprWithCodeGenTree&gt;
+{
+    DECLARE_PHASE("Sync Type of New Expr with CodeGen Tree", "newtype", &ILEmitterPhase);
+public:
+    // Indicate whether the leaf node type may be rewritten by this visitor
+    template&lt;typename T&gt;
+    static constexpr bool may_rewrite = std::is_base_of_v&lt;NewExpr_t, T&gt;;
+
+    using TreeRewriteVisitor::Visit;
+
+    s_tree* Visit(NewExpr_t* pTree)
+    {
+        // Make sure 'may_rewrite' is in sync with 'Visit'
+        static_assert(may_rewrite&lt;std::remove_pointer_t&lt;decltype(pTree)&gt;&gt;);
+        pTree = VisitChildren(pTree);
+        // If anyone decided to go mutate the type of the NewExpr_t after it was
+        // created, make sure the type of the codegen tree is kept in sync.
+        //
+        // Failure to do this can cause problems during toil.  See bug #1087185.
+        pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());
+        return pTree;
+    }
+};</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <p>Using the visitor</p>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <p>Using the visitor</p>
+                        <pre data-id="decl-index"><code class="cpp" data-line-numbers>void f(s_tree* root)
+{
+    SyncTypeOfNewExprWithCodeGenTree visitor;
+    root-&gt;Accept(visitor);
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate>
+                        <h2>Tree Visitors Today</h2>
+                        <p>Using the visitor</p>
+                        <pre data-id="decl-index" style="width: 1000px"><code class="cpp" data-line-numbers>void f(s_tree* root)
+{
+    SyncTypeOfNewExprWithCodeGenTree visitor;
+    root-&gt;Accept(visitor); // Probably should crash if 'root' is nullptr...
+}</code></pre>
+                    </section>
+                </section>
+
+                <section data-transition="convex-in">
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Using <code>msvc::plate</code></h2>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Using <code>msvc::plate</code></h2>
+                        <pre data-id="decl-index" style="font-size: 0.46em;"><code class="cpp" data-line-numbers>s_tree* update_new_expr_type(NewExpr_t* pTree)
+{
+    // If anyone decided to go mutate the type of the NewExpr_t after it was
+    // created, make sure the type of the codegen tree is kept in sync.
+    //
+    // Failure to do this can cause problems during toil.  See bug #1087185.
+    pTree-&gt;CodeGenTree()-&gt;type(pTree-&gt;type());
+    return pTree;
+}</code></pre>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Using <code>msvc::plate</code></h2>
+                        <p>How to visit</p>
+                    </section>
+
+                    <section data-auto-animate data-auto-animate-id="a">
+                        <h2>Using <code>msvc::plate</code></h2>
+                        <p>How to visit</p>
+                        <pre data-id="decl-index" style="font-size: 0.46em;"><code class="cpp" data-line-numbers>void f(s_tree* root)
+{
+    msvc::plate::edit(root, update_new_expr_type);
+}</code></pre>
+                    </section>
+                </section>
+            </div>
+        </div>
+        <script src="../dist/reveal.js"></script>
+        <script src="../plugin/highlight/highlight.js"></script>
+        <script>
+            Reveal.initialize({
+                progress: true,
+                slideNumber: true,
+                hash: true,
+                plugins: [ RevealHighlight ]
+            });
+        </script>
+    </body>
+</html>
